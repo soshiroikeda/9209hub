@@ -1,0 +1,17 @@
+html{
+    height: 100%;
+}
+
+body{
+    font-family: serif;
+    height: 100%;
+    margin: 0;
+    text-align: center;
+    background-color: black;
+    color: white;
+}
+
+section p{
+    margin: 30px;
+    font-size: 50px;
+}
