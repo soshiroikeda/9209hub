@@ -11,7 +11,12 @@ body{
     color: white;
 }
 
-section p{
+.title p{
     margin: 30px;
-    font-size: 50px;
+    font-size: 65px;
+}
+
+.second p{
+    font-size: 20px;
+    color: red;
 }
