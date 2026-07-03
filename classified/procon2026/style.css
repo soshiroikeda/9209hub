@@ -1,0 +1,322 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #000;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ---- 画面共通 ---- */
+.screen {
+  display: none;
+  position: absolute;
+  inset: 0;
+}
+.screen.active { display: block; }
+
+.center-col {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.center-col.wide {
+  width: 660px;
+  max-width: 95vw;
+  margin: 0 auto;
+  justify-content: flex-start;
+  padding: 24px 0 12px;
+}
+.result-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  /* 例外: 最大10日分の詳細データを欠落なく確認できるよう、結果画面のみ縦スクロールを許可 */
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.app-title {
+  font-size: 16px;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.start-btn {
+  width: 300px;
+  padding: 10px 0;
+  background: #fff;
+  color: #000;
+  border: none;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  text-align: center;
+}
+.start-btn.small { width: 100%; padding: 6px 0; font-size: 12px; }
+.start-btn:active { background: #ccc; }
+
+.ghost-file {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.opt-check { font-size: 12px; color: #ccc; cursor: pointer; }
+.hint { font-size: 11px; color: #777; margin: 3px 0; }
+
+/* ---- 2カラムレイアウト ---- */
+.layout { display: flex; height: 100%; }
+
+.left-col {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* マップゾーン: 領域固定・セルサイズ側を調整(仕様Q23) */
+.map-zone {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: #000;
+  border-right: 1px solid #333;
+}
+.map-zone canvas { display: block; width: 100%; height: 100%; }
+
+/* UIゾーン */
+.ui-zone {
+  width: 400px;
+  flex: 0 0 400px;
+  height: 100%;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden; /* スクロール不許可(仕様Q24) */
+}
+
+.panel {
+  border: 1px solid #444;
+  background: #0a0a0a;
+  flex-shrink: 0;
+}
+.panel-title {
+  background: #1a1a1a;
+  font-size: 11px;
+  padding: 3px 6px;
+  color: #aaa;
+  border-bottom: 1px solid #333;
+}
+.panel-body {
+  padding: 5px 6px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.log-panel {
+  flex: 1 1 auto;
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+}
+.log-panel .panel-body {
+  overflow: hidden;
+  color: #9c9;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.log-head { color: #888; margin-top: 2px; }
+
+/* ステータスバー / コントロールバー */
+#status-bar {
+  height: 34px;
+  flex: 0 0 34px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-bottom: 1px solid #333;
+  border-right: 1px solid #333;
+}
+#control-bar {
+  height: 48px;
+  flex: 0 0 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-top: 1px solid #333;
+  border-right: 1px solid #333;
+}
+
+.action-btn {
+  background: #fff;
+  color: #000;
+  border: none;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.action-btn.big { font-size: 13px; padding: 8px 20px; }
+.action-btn:disabled { background: #555; color: #999; cursor: default; }
+.action-btn:active:not(:disabled) { background: #ccc; }
+
+.mini-btn {
+  background: #222;
+  color: #ddd;
+  border: 1px solid #555;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.mini-btn:active { background: #444; }
+
+/* ---- バー類 ---- */
+.bar {
+  background: #222;
+  border: 1px solid #444;
+  height: 8px;
+  position: relative;
+}
+.bar-fill { background: #fff; height: 100%; width: 0%; }
+.day-bar { width: 180px; }
+.fuel-bar { width: 64px; display: inline-block; vertical-align: middle; flex-shrink: 0; }
+.stock-bar { width: 56px; display: inline-block; vertical-align: middle; flex-shrink: 0; }
+.sum-bar { width: 90px; display: inline-block; vertical-align: middle; flex-shrink: 0; }
+
+/* ---- エージェント / スポット表示 ---- */
+.agent-row, .spot-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.agent-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: bold;
+  color: #000;
+  flex-shrink: 0;
+}
+.agent-icon.patrol { background: #4fc3f7; }
+.agent-icon.supply { background: #ffa726; }
+.agent-icon.none   { background: #555; color: #ccc; }
+
+.a-pos { width: 128px; font-size: 10px; overflow: hidden; text-overflow: ellipsis; }
+.a-fuel { font-size: 10px; width: 44px; flex-shrink: 0; }
+.a-udon { font-size: 10px; color: #ddd; overflow: hidden; text-overflow: ellipsis; }
+
+.spot-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  display: inline-block; flex-shrink: 0;
+  border: 1px solid #000;
+}
+
+.badge-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.brand-badge {
+  color: #000;
+  font-size: 10px;
+  padding: 2px 6px;
+  font-weight: bold;
+}
+.sum-text { font-size: 10px; color: #aaa; }
+
+/* ---- 行動計画入力 ---- */
+.plan-text {
+  width: 100%;
+  background: #000;
+  color: #fff;
+  border: 1px solid #444;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  padding: 4px;
+  resize: none;
+  margin: 4px 0;
+}
+.error-text {
+  color: #f66;
+  font-size: 11px;
+  margin-top: 4px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  max-height: 130px;
+  overflow-y: auto; /* エラーのみ例外的にスクロール可(全文確認のため) */
+}
+
+/* ---- GUIモード ---- */
+#gui-agent-list { margin: 4px 0; }
+.gui-agent-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 3px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.gui-agent-row.sel { border-color: #fff; background: #161616; }
+.gui-sum { font-size: 10px; width: 52px; flex-shrink: 0; }
+.gui-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 4px 0;
+  flex-wrap: wrap;
+}
+#gui-wait-num {
+  width: 48px;
+  background: #000;
+  color: #fff;
+  border: 1px solid #444;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  padding: 2px 4px;
+}
+
+/* ---- タイプ選択オーバーレイ ---- */
+#type-overlay { position: absolute; inset: 0; pointer-events: none; }
+.type-btns {
+  position: absolute;
+  transform: translate(-50%, 0);
+  display: flex;
+  gap: 2px;
+  pointer-events: auto;
+}
+.type-btns button {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  padding: 1px 5px;
+  border: 1px solid #666;
+  background: #111;
+  color: #ccc;
+  cursor: pointer;
+}
+.type-btns button.sel-patrol { background: #4fc3f7; color: #000; border-color: #4fc3f7; }
+.type-btns button.sel-supply { background: #ffa726; color: #000; border-color: #ffa726; }
+
+.btn-row { display: flex; gap: 12px; margin-top: 10px; flex-shrink: 0; }

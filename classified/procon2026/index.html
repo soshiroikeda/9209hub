@@ -1,11 +1,222 @@
 <!DOCTYPE html>
-
-<html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta property="og:title" content="ヘキサうどん シミュレータ"/>
+  <meta property="og:description" content="第37回高専プロコン競技部門『ヘキサうどん』を公式ルール準拠で実行するツール(単一チーム版)"/>
+  <title>ヘキサうどん シミュレータ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
 <body>
-    <meta charset="utf-8"/>
-    <meta property="og:title" content="TEST - ヘキサうどん"/>
-    <meta property="og:description" content="ヘキサうどんをWEB上で実行するツールです。公式ルールに完全準拠しています。"/>
-    <title>TEST - ヘキサうどん</title>
-    <link rel="stylesheet" href="style.css">
+
+  <!-- ======== 1. 起動画面 ======== -->
+  <div id="screen-start" class="screen">
+    <div class="center-col">
+      <div class="app-title">ヘキサうどん シミュレータ</div>
+      <button class="start-btn" style="position: relative;">
+        マップデータをアップロード
+        <input type="file" id="map-file-input" accept=".json" class="ghost-file">
+      </button>
+      <button class="start-btn" id="btn-sample">サンプルマップで起動</button>
+      <div id="start-error" class="error-text"></div>
+    </div>
+  </div>
+
+  <!-- ======== 2. モード選択画面 ======== -->
+  <div id="screen-mode" class="screen">
+    <div class="center-col">
+      <div class="app-title">入力モード選択</div>
+      <button class="start-btn" id="btn-mode-json">JSONアップロード モード</button>
+      <button class="start-btn" id="btn-mode-gui">GUI操作 モード</button>
+      <label class="opt-check">
+        <input type="checkbox" id="chk-custom-place"> エージェント初期位置をカスタム配置する
+      </label>
+      <div class="hint">※カスタム配置でもルール制約(非スポット平地・重複不可)は強制されます</div>
+    </div>
+  </div>
+
+  <!-- ======== 3a. カスタム配置画面 ======== -->
+  <div id="screen-place" class="screen">
+    <div class="layout">
+      <div class="left-col">
+        <div class="map-zone"><canvas id="place-canvas"></canvas></div>
+      </div>
+      <div class="ui-zone">
+        <div class="panel">
+          <div class="panel-title">初期位置カスタム配置</div>
+          <div class="panel-body">
+            マップ上のセルをクリックして<br>
+            エージェントを順番に配置してください。<br>
+            配置できるのは <b>スポットのない平地</b> のみで、<br>
+            重複配置はできません。
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">配置状況</div>
+          <div class="panel-body" id="place-list"></div>
+        </div>
+        <button class="action-btn" id="btn-place-reset">配置をリセット</button>
+        <button class="action-btn" id="btn-place-confirm" disabled>配置を確定</button>
+        <div id="place-error" class="error-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== 3b. タイプ選択画面 ======== -->
+  <div id="screen-type" class="screen">
+    <div class="layout">
+      <div class="left-col">
+        <div class="map-zone">
+          <canvas id="type-canvas"></canvas>
+          <div id="type-overlay"></div>
+        </div>
+      </div>
+      <div class="ui-zone">
+        <div class="panel">
+          <div class="panel-title">エージェントタイプ選択</div>
+          <div class="panel-body">
+            マップ上の各エージェントのセルで<br>
+            「巡回」または「補給」を選択してください。<br><br>
+            未選択のまま確定した場合、<br>
+            そのエージェントは <b>巡回車</b> になります(公式Q53)。<br>
+            確定後の変更はできません。
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">選択状況</div>
+          <div class="panel-body" id="type-list"></div>
+        </div>
+        <button class="action-btn" id="btn-type-confirm">タイプを確定して試合開始</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== 4. 行動計画入力画面 ======== -->
+  <div id="screen-plan" class="screen">
+    <div class="layout">
+      <div class="left-col">
+        <div class="map-zone"><canvas id="plan-canvas"></canvas></div>
+      </div>
+      <div class="ui-zone">
+        <div class="panel">
+          <div class="panel-title" id="plan-day-title">Day 1 開始</div>
+          <div class="panel-body" id="plan-day-info"></div>
+        </div>
+
+        <!-- JSONアップロードモード -->
+        <div class="panel" id="plan-json-panel">
+          <div class="panel-title">行動計画の提出 (JSON)</div>
+          <div class="panel-body">
+            <button class="start-btn small" style="position: relative;">
+              計画ファイルを選択
+              <input type="file" id="plan-file-input" accept=".json" class="ghost-file">
+            </button>
+            <div class="hint">またはテキストで貼り付け:</div>
+            <textarea id="plan-textarea" class="plan-text" rows="7" spellcheck="false"
+              placeholder='[&#10;  [2, 2, -12],&#10;  [-16],&#10;  [0, 1, -10],&#10;  [5, 5, -2]&#10;]'></textarea>
+          </div>
+        </div>
+
+        <!-- GUI操作モード -->
+        <div class="panel" id="plan-gui-panel">
+          <div class="panel-title">行動計画の作成 (GUI)</div>
+          <div class="panel-body">
+            <div class="hint">エージェントを選択→隣接セルをクリックで移動追加</div>
+            <div id="gui-agent-list"></div>
+            <div class="gui-controls">
+              <input type="number" id="gui-wait-num" min="1" value="1">
+              <button class="mini-btn" id="btn-gui-wait">待機追加</button>
+              <button class="mini-btn" id="btn-gui-fill">残りを待機で埋める</button>
+              <button class="mini-btn" id="btn-gui-undo">1手戻す</button>
+            </div>
+            <div class="hint">計画JSON(確認用):</div>
+            <textarea id="gui-json-view" class="plan-text" rows="4" readonly></textarea>
+            <button class="mini-btn" id="btn-gui-download">計画JSONをダウンロード</button>
+          </div>
+        </div>
+
+        <button class="action-btn" id="btn-plan-submit">計画を提出</button>
+        <div id="plan-error" class="error-text"></div>
+
+        <div class="panel">
+          <div class="panel-title">セル詳細 (クリックで選択)</div>
+          <div class="panel-body" id="plan-cell-detail">セルをクリックすると詳細を表示します。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== 5. 再生画面 ======== -->
+  <div id="screen-play" class="screen">
+    <div class="layout">
+      <div class="left-col">
+        <div id="status-bar">
+          <span id="st-day"></span>
+          <span id="st-step"></span>
+          <span id="st-next"></span>
+          <div class="bar day-bar"><div class="bar-fill" id="st-day-fill"></div></div>
+        </div>
+        <div class="map-zone" id="play-map-zone"><canvas id="play-canvas"></canvas></div>
+        <div id="control-bar">
+          <button class="action-btn big" id="btn-next-phase"></button>
+          <button class="action-btn" id="btn-skip-day">この日を最後まで進める ▶▶</button>
+          <button class="action-btn" id="btn-day-end" style="display:none;"></button>
+        </div>
+      </div>
+
+      <div class="ui-zone">
+        <div class="panel">
+          <div class="panel-title" id="brand-title">獲得済み系列</div>
+          <div class="panel-body badge-row" id="brand-badges"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">エージェント</div>
+          <div class="panel-body" id="agent-panel"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">スポット在庫</div>
+          <div class="panel-body" id="spot-panel"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">セル詳細 (クリックで選択)</div>
+          <div class="panel-body" id="play-cell-detail">セルをクリックすると詳細を表示します。</div>
+        </div>
+        <div class="panel log-panel">
+          <div class="panel-title">イベントログ (新しい順)</div>
+          <div class="panel-body" id="log-body"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== 6. 終了サマリ画面 ======== -->
+  <div id="screen-result" class="screen">
+    <div class="center-col wide">
+      <div class="app-title">試合終了</div>
+      <div class="result-scroll">
+        <div class="panel">
+          <div class="panel-title">最終結果</div>
+          <div class="panel-body" id="result-summary"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">エージェント別成績</div>
+          <div class="panel-body" id="result-agents"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">日別ログ</div>
+          <div class="panel-body" id="result-days"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="start-btn" id="btn-reset-same">同じマップでリセット (タイプ選択から)</button>
+        <button class="start-btn" id="btn-reset-all">別のマップを読み込む</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="sim.js"></script>
+  <script src="render.js"></script>
+  <script src="ui.js"></script>
 </body>
 </html>
